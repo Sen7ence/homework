@@ -10,10 +10,10 @@ plt.rcParams["mathtext.fontset"] = "stix"
 
 class PRFluid:
     def __init__(self, Tc, Pc, omega, M):
-        self.Tc = Tc  # K
-        self.Pc = Pc  # Pa
+        self.Tc = Tc  # 输入K
+        self.Pc = Pc * 1e6  # 输入MPa
         self.omega = omega  # 无量纲
-        self.M = M  # kg/mol
+        self.M = M / 1000  # 输入g/mol
 
     R = 8.314462618  # J/(mol*K)
 
@@ -27,15 +27,15 @@ class PRFluid:
         return a, b
 
     # 计算A和B
-    def AB(self, T, P):
+    def AB(self, T, p):
         a, b = self.params(T)
-        A = a * P / (self.R * T) ** 2
-        B = b * P / (self.R * T)
+        A = a * p * 1e6 / (self.R * T) ** 2
+        B = b * p * 1e6 / (self.R * T)
         return A, B
 
     # 计算C2, C1, C0
-    def C(self, T, P):
-        A, B = self.AB(T, P)
+    def C(self, T, p):
+        A, B = self.AB(T, p)
         C2 = -(1 - B)
         C1 = A - 3 * B**2 - 2 * B
         C0 = -(A * B - B**2 - B**3)
@@ -43,8 +43,8 @@ class PRFluid:
 
     # 计算压缩因子Z
     # 液相
-    def Zl(self, T, P):
-        C2, C1, C0 = self.C(T, P)
+    def Zl(self, T, p):
+        C2, C1, C0 = self.C(T, p)
         # 牛顿法求解Z
         Zl = 0.001  # 初始猜测值
         for _ in range(100):
@@ -57,8 +57,8 @@ class PRFluid:
         return Zl
 
     # 气相
-    def Zg(self, T, P):
-        C2, C1, C0 = self.C(T, P)
+    def Zg(self, T, p):
+        C2, C1, C0 = self.C(T, p)
         # 牛顿法求解Z
         Zg = 1.0  # 初始猜测值
         for _ in range(100):
@@ -72,50 +72,46 @@ class PRFluid:
 
     # 计算比体积v
     # 液相
-    def vl(self, T, P):
-        Zl = self.Zl(T, P)
-        vl = Zl * self.R * T / (P * self.M)
+    def vl(self, T, p):
+        Zl = self.Zl(T, p)
+        vl = Zl * self.R * T / (p * 1e6 * self.M)
         return vl
 
     # 气相
-    def vg(self, T, P):
-        Zg = self.Zg(T, P)
-        vg = Zg * self.R * T / (P * self.M)
+    def vg(self, T, p):
+        Zg = self.Zg(T, p)
+        vg = Zg * self.R * T / (p * 1e6 * self.M)
         return vg
 
     # 画v-T图
     def plot_Tv(
         self,
-        fluid_name,
-        P,
-        Tsat,
-        T_min,
-        T_max,
-        nT=220,
-        savepath=None,
-        dpi=300,
-        bbox_inches="tight",
-        transparent=False,
-        close_fig=False,
+        fluid_name,  # 流体名称
+        p,  # 压力 Pa
+        Tsat,  # 饱和温度 K
+        T_min,  # 温度范围最小值 K
+        T_max,  # 温度范围最大值 K
+        nT=220,  # 温度点数
     ):
-        T_grid = np.linspace(T_min, T_max, nT)
-        v_grid = np.empty_like(T_grid)
+        T_grid = np.linspace(T_min, T_max, nT)  # 温度网格
+        v_grid = np.empty_like(T_grid)  # 比体积网格
+        # 计算比体积
         for i, T in enumerate(T_grid):
             if T < Tsat:
-                v_grid[i] = self.vl(T, P)
+                v_grid[i] = self.vl(T, p)
             elif T > Tsat:
-                v_grid[i] = self.vg(T, P)
+                v_grid[i] = self.vg(T, p)
             else:
-                v_grid[i] = 0.5 * (self.vl(T, P) + self.vg(T, P))
-        fig, ax = plt.subplots()
+                v_grid[i] = 0.5 * (self.vl(T, p) + self.vg(T, p))
+        fig, ax = plt.subplots()  # 创建图像和坐标轴
         # 主曲线
         ax.plot(v_grid, T_grid, linewidth=2, label=fluid_name)
         xmin, xmax = np.nanmin(v_grid), np.nanmax(v_grid)
         # Tsat 虚线
         ax.hlines(Tsat, xmin, xmax, linestyles="--", label=r"$T_{\mathrm{sat}}$")
-        # 用纵轴刻度标注 Tsat
+        # 标注 Tsat
         yt = list(ax.get_yticks())
-        # 如果 Tsat 不在当前刻度中，加入并排序
+        # 加入Tsat并排序
         if not any(abs(t - Tsat) < 1e-8 for t in yt):
             yt.append(Tsat)
         yt = np.array(sorted(yt))
@@ -137,38 +133,28 @@ class PRFluid:
         ax.set_xlabel(r"$v$ (m³/kg)")
         ax.set_ylabel(r"$T$ (K)")
         # 标题
-        ax.set_title(f"{fluid_name}  $v$–$T$ at $P$ = {P/1e6:.3f} MPa")
+        ax.set_title(f"{fluid_name}  $v$–$T$ at $p$ = {p:.1f} MPa")
         ax.grid(True)
         ax.set_xscale("log")  # 使用对数刻度
         ax.legend(loc="upper left", frameon=True, fancybox=True, framealpha=0.9)
-        # 默认保存路径为脚本同目录下的 fig 文件夹（当 savepath 为 None 时）
-        if savepath is None:
-            base_dir = os.path.dirname(os.path.abspath(__file__))
-            fig_dir = os.path.join(base_dir, "fig")
-            os.makedirs(fig_dir, exist_ok=True)
-            # 简单替换文件名中的非法字符
-            safe_name = "".join(
-                c if c.isalnum() or c in ("_", "-") else "_" for c in fluid_name
-            )
-            filename = f"{safe_name}_v-T_P{P/1e6:.3f}MPa.png"
-            savepath = os.path.join(fig_dir, filename)
 
-        # 保存图像（如果提供或已生成 savepath）
-        if savepath:
-            dirname = os.path.dirname(savepath)
-            if dirname and not os.path.exists(dirname):
-                os.makedirs(dirname, exist_ok=True)
-            fig.savefig(
-                savepath, dpi=dpi, bbox_inches=bbox_inches, transparent=transparent
-            )
-            if close_fig:
-                plt.close(fig)
+        # 固定保存路径为脚本同目录下的 figs 文件夹
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        fig_dir = os.path.join(base_dir, "figs")
+        os.makedirs(fig_dir, exist_ok=True)
 
-        return fig
+        # 文件名固定为"流体名称.png"
+        filename = f"{fluid_name}.png"
+        savepath = os.path.join(fig_dir, filename)
+
+        # 保存图像，固定参数
+        fig.savefig(savepath, dpi=300, bbox_inches="tight", transparent=False)
+        plt.close(fig)
 
 
-R290 = PRFluid(369.89, 4.2512e6, 0.1521, 44.096 / 1000)  # kg/mol
-R290.plot_Tv("R290", 1.4e6, 317.86, 200, 450, savepath="R290_v-T.png")
+# 实际计算
+R290 = PRFluid(369.89, 4.2512, 0.1521, 44.096)
+R290.plot_Tv("R290", 1.4, 317.86, 200, 450)
 
-R600a = PRFluid(407.81, 3.629e6, 0.184, 58.122 / 1000)  # kg/mol
-R600a.plot_Tv("R600a", 0.6e6, 314.12, 200, 450, savepath="R600a_v-T.png")
+R600a = PRFluid(407.81, 3.629, 0.184, 58.122)
+R600a.plot_Tv("R600a", 0.6, 314.12, 200, 450)
