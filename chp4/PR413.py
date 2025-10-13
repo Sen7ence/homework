@@ -1,4 +1,4 @@
-# v的单位需要更改 h和s的单位需要更改 h的公式错了
+# 理清各压力单位，三个压力，临界压力pc，0℃的饱和压力ps0，计算时的压力p
 import numpy as np
 
 
@@ -8,7 +8,7 @@ class PRHS:
         self.pc = pc * 1e6  # Pa，输入MPa
         self.omega = omega  # 无量纲
         self.M = M / 1e3  # kg/mol，输入g/mol
-        self.ps0 = ps0 * 1e6  # Pa,输入MPa
+        self.ps0 = ps0  # MPa
 
     R = 8.314462618  # J/(mol*K)
 
@@ -79,13 +79,13 @@ class PRHS:
     # 液相
     def vl(self, T, p):
         Zl = self.Zl(T, p)
-        vl = Zl * self.R * T / (p * 1e6 * self.M)  # p从MPa转换为Pa
+        vl = Zl * self.R * T / (p * 1e6)  # p从MPa转换为Pa
         return vl
 
     # 气相
     def vg(self, T, p):
         Zg = self.Zg(T, p)
-        vg = Zg * self.R * T / (p * 1e6 * self.M)  # p从MPa转换为Pa
+        vg = Zg * self.R * T / (p * 1e6)  # p从MPa转换为Pa
         return vg
 
     # 计算焓的余函数
@@ -135,6 +135,16 @@ class PRHS:
     # 计算c_p积分
     def cp(self, T, A, B, C, D):
         cp = (
+            A * (T - 273.15)
+            + B / 2 * (T**2 - 273.15**2)
+            + C / 3 * (T**3 - 273.15**3)
+            + D / 4 * (T**4 - 273.15**4)
+        )
+        return cp
+
+    # 计算c_p/T积分
+    def cpT(self, T, A, B, C, D):
+        cp = (
             A * np.log(T / 273.15)
             + B * (T - 273.15)
             + C / 2 * (T**2 - 273.15**2)
@@ -148,27 +158,37 @@ class PRHS:
         h_r_ps_0 = self.h_res_l(273.15, self.ps0)
         cp0 = self.cp(T, A, B, C, D)
         h_res_l = self.h_res_l(T, p)
-        hl = 200 * 10**3 + h_r_ps_0 + cp0 - h_res_l  # J/kg
+        hl = 200 * 1e3 + cp0 + (h_r_ps_0 - h_res_l) / self.M  # J/kg
         return hl
 
     def s_l(self, T, A, B, C, D, p):
         s_r_ps_0 = self.s_res_l(273.15, self.ps0)
-        cp0 = self.cp(T, A, B, C, D)
+        cpT = self.cpT(T, A, B, C, D)
         sr_l = self.s_res_l(T, p)
-        sl = 10**3 + s_r_ps_0 + cp0 - self.R * np.log(p / self.ps0) - sr_l  # J/(kg*K)
+        sl = (
+            1e3 + cpT + (s_r_ps_0 - self.R * np.log(p / self.ps0) - sr_l) / self.M
+        )  # J/(kg*K)
         return sl
 
     # 气相
     def h_g(self, T, A, B, C, D, p):
-        h_r_ps_0 = self.h_res_l(273.15, self.ps0)
+        h_r_ps_0 = self.h_res_l(273.15, self.ps0)  # 使用液相作为基准
         cp0 = self.cp(T, A, B, C, D)
         h_res_g = self.h_res_g(T, p)
-        hg = 200 * 10**3 + h_r_ps_0 + cp0 - h_res_g  # J/kg
+        hg = 200 * 1e3 + cp0 + (h_r_ps_0 - h_res_g) / self.M  # J/kg
         return hg
 
     def s_g(self, T, A, B, C, D, p):
-        s_r_ps_0 = self.s_res_l(273.15, self.ps0)
-        cp0 = self.cp(T, A, B, C, D)
+        s_r_ps_0 = self.s_res_l(273.15, self.ps0)  # 使用液相作为基准
+        cpT = self.cpT(T, A, B, C, D)
         sr_g = self.s_res_g(T, p)
-        sg = 10**3 + s_r_ps_0 + cp0 - self.R * np.log(p / self.ps0) - sr_g  # J/(kg*K)
+        sg = (
+            1e3 + cpT + (s_r_ps_0 - self.R * np.log(p / self.ps0) - sr_g) / self.M
+        )  # J/(kg*K)
         return sg
+
+
+R290 = PRHS(369.89, 4.2512, 0.1521, 44.096, 0.47446)
+R600a = PRHS(407.81, 3.629, 0.184, 58.122, 0.15696)
+
+print(R290.s_l(300, -95.80, 6.945, -3.597 * 1e-3, 7.290 * 1e-7, 1.4))

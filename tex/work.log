@@ -1,10 +1,10 @@
-This is XeTeX, Version 3.141592653-2.6-0.999997 (TeX Live 2025) (preloaded format=xelatex 2025.4.3)  10 OCT 2025 23:56
+This is XeTeX, Version 3.141592653-2.6-0.999997 (TeX Live 2025) (preloaded format=xelatex 2025.4.3)  11 OCT 2025 14:26
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
  %&-line parsing enabled.
-**chp3
-(./chp3.tex
+**work
+(./work.tex
 LaTeX2e <2024-11-01> patch level 2
 L3 programming layer <2025-01-18>
 (d:/texlive/2025/texmf-dist/tex/latex/base/article.cls
@@ -354,8 +354,8 @@ Package: multirow 2024/11/12 v2.9 Span multiple rows of a table
 \bigstrutjot=\dimen198
 ) (d:/texlive/2025/texmf-dist/tex/latex/listings/lstlang1.sty
 File: lstlang1.sty 2024/09/23 1.10c listings language file
-) (./chp3.aux)
-\openout1 = `chp3.aux'.
+) (./work.aux)
+\openout1 = `work.aux'.
 
 LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 41.
 LaTeX Font Info:    ... okay on input line 41.
@@ -511,14 +511,10 @@ Package fontspec Info:
 [3]
 
 [4]
-File: ../figs/R290.png Graphic file (type bmp)
-<../figs/R290.png>
-File: ../figs/R600a.png Graphic file (type bmp)
-<../figs/R600a.png>
-
-
-LaTeX Warning: `h' float specifier changed to `ht'.
-
+File: ../chp3/figs/R290.png Graphic file (type bmp)
+<../chp3/figs/R290.png>
+File: ../chp3/figs/R600a.png Graphic file (type bmp)
+<../chp3/figs/R600a.png>
 
 
 [5]
@@ -531,19 +527,29 @@ LaTeX Warning: `h' float specifier changed to `ht'.
 
 [7]
 
-[8] (./chp3.aux)
+[8]
+
+[9]
+
+[10]
+
+[11]
+
+[12]
+
+[13] (./work.aux)
  ***********
 LaTeX2e <2024-11-01> patch level 2
 L3 programming layer <2022/08/05>
  ***********
  ) 
 Here is how much of TeX's memory you used:
- 10332 strings out of 473831
- 248338 string characters out of 5733138
- 1152905 words of memory out of 5000000
- 33251 multiletter control sequences out of 15000+600000
+ 10360 strings out of 473831
+ 248670 string characters out of 5733138
+ 1152910 words of memory out of 5000000
+ 33279 multiletter control sequences out of 15000+600000
  565348 words of font info for 84 fonts, out of 8000000 for 9000
  1348 hyphenation exceptions out of 8191
  93i,11n,111p,360b,1712s stack positions out of 10000i,1000n,20000p,200000b,200000s
 
-Output written on chp3.pdf (8 pages).
+Output written on work.pdf (13 pages).
