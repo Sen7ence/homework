@@ -1,0 +1,181 @@
+import numpy as np
+
+class PR_Generic:
+    R = 8.314462618  # J/(mol*K)
+
+    def __init__(
+        self,
+        # 必需：组分1参数（字典）
+        comp1,
+        # 可选：组分2参数（字典或None）
+        comp2=None,
+        # 若 comp2 不为 None，则给出组分1的摩尔分数 x1 (0..1)
+        x1=None,
+        # 参考低压（MPa）用于余函数基准（如果你用MPa接口）
+        ps0_MPa=0.101325,
+    ):
+        """
+        comp dict 关键字期望：
+          {'Tc':K, 'pc':MPa, 'omega':-, 'M': g/mol}
+        如果热容系数需要也可以放在 comp dict： 'cp_coeffs': (A,B,C,D)（单位需自定）
+        """
+        self.comp1 = comp1
+        self.comp2 = comp2
+        self.x1 = x1 if comp2 is not None else 1.0
+        self.x2 = 0.0 if comp2 is None else (1.0 - self.x1)
+        # 内部用 Pa 和 kg/mol
+        self.comp1['pc_pa'] = comp1['pc'] * 1e6
+        self.comp1['M_kgpmol'] = comp1['M'] / 1e3
+        if comp2 is not None:
+            self.comp2['pc_pa'] = comp2['pc'] * 1e6
+            self.comp2['M_kgpmol'] = comp2['M'] / 1e3
+
+        # 默认为 0 的 kij（若 comp2 None 则忽略）
+        self.kij = self.comp2.get('kij', 0.0) if self.comp2 else 0.0
+
+        # 将 ps0 存为 Pa 以便余函数基准（对外传 MPa）
+        self.ps0 = ps0_MPa * 1e6
+
+    def _kappa(self, omega):
+        return 0.37464 + 1.54226 * omega - 0.26992 * omega**2
+
+    def _pure_ab_da(self, comp, T):
+        Tc = comp['Tc']; pc = comp['pc_pa']; omega = comp['omega']
+        kappa = self._kappa(omega)
+        Tr = T / Tc
+        alpha = (1 + kappa * (1 - np.sqrt(Tr)))**2
+        a = 0.45724 * self.R**2 * Tc**2 / pc * alpha
+        b = 0.07780 * self.R * Tc / pc
+        # da = da/dT (molar)
+        # derivative of a wrt T (mol-level) using chain rule:
+        da = (
+            0.45724 * self.R**2 * Tc**2 / pc
+            * 2 * (1 + kappa * (1 - np.sqrt(Tr)))
+            * (-kappa * 0.5 * Tr**(-0.5) / Tc)
+        )
+        # note sign: derivative of alpha positive/negative automatically
+        return a, b, da
+
+    def params(self, T):
+        """返回 (a [J^2·m³? mol^2? mol-level units], b [m^3/mol], da/dT [J/mol/K])"""
+        if self.comp2 is None or self.x1 == 1.0:
+            a1, b1, da1 = self._pure_ab_da(self.comp1, T)
+            a = a1
+            b = b1
+            da = da1
+        else:
+            a1, b1, da1 = self._pure_ab_da(self.comp1, T)
+            a2, b2, da2 = self._pure_ab_da(self.comp2, T)
+            x1 = self.x1; x2 = self.x2; kij = self.kij
+            a = x1**2 * a1 + x2**2 * a2 + 2 * x1 * x2 * np.sqrt(a1 * a2) * (1 - kij)
+            b = x1 * b1 + x2 * b2
+            # 混合 da 的近似（从常见混合规则推广）
+            da = (
+                x1**2 * da1
+                + x2**2 * da2
+                + x1 * x2 * (1 - kij) * (np.sqrt(a2/a1) * da1 + np.sqrt(a1/a2) * da2)
+            )
+        return a, b, da
+
+    def AB(self, T, p_MPa):
+        """p_MPa: 输入 MPa，内部转 Pa"""
+        p = p_MPa * 1e6
+        a, b, da = self.params(T)
+        A = a * p / (self.R * T)**2
+        B = b * p / (self.R * T)
+        return A, B, a, b, da  # 额外返回 a,b,da 以便余函数计算使用
+
+    # 三次方程系数
+    def cubic_coeffs(self, T, p_MPa):
+        A, B, a, b, da = self.AB(T, p_MPa)
+        C2 = -(1 - B)
+        C1 = A - 3 * B**2 - 2 * B
+        C0 = -(A * B - B**2 - B**3)
+        return C2, C1, C0
+
+    def _solve_Z_newton(self, T, p_MPa, Z0):
+        C2, C1, C0 = self.cubic_coeffs(T, p_MPa)
+        Z = Z0
+        for _ in range(200):
+            f = Z**3 + C2 * Z**2 + C1 * Z + C0
+            df = 3 * Z**2 + 2 * C2 * Z + C1
+            if df == 0:
+                break
+            Znew = Z - f / df
+            if abs(Znew - Z) < 1e-10:
+                return Znew
+            Z = Znew
+        return Z
+
+    def Z_liquid(self, T, p_MPa):
+        return self._solve_Z_newton(T, p_MPa, Z0=0.001)
+
+    def Z_gas(self, T, p_MPa):
+        return self._solve_Z_newton(T, p_MPa, Z0=1.0)
+
+    def v_from_Z(self, Z, T, p_MPa):
+        p = p_MPa * 1e6
+        return Z * self.R * T / p  # m^3/mol
+
+    # 余函数（返回 mol-level: J/mol）
+    def h_res(self, T, p_MPa, phase='g'):
+        a, b, da = self.params(T)
+        if phase == 'g':
+            Z = self.Z_gas(T, p_MPa)
+        else:
+            Z = self.Z_liquid(T, p_MPa)
+        v = self.v_from_Z(Z, T, p_MPa)
+        # note: formula uses sqrt(8) and constants from PR; sign consistent with typical PR residual enthalpy:
+        hr = (T * da - a) / (b * np.sqrt(8)) * np.log((v + (1 + np.sqrt(2)) * b) / (v + (1 - np.sqrt(2)) * b)) + self.R * T * (Z - 1)
+        return hr  # J/mol
+
+    def s_res(self, T, p_MPa, phase='g'):
+        a, b, da = self.params(T)
+        if phase == 'g':
+            Z = self.Z_gas(T, p_MPa)
+        else:
+            Z = self.Z_liquid(T, p_MPa)
+        v = self.v_from_Z(Z, T, p_MPa)
+        sr = (
+            -self.R * np.log((v - b) / v)
+            + da / (b * np.sqrt(8)) * np.log((v + (1 + np.sqrt(2)) * b) / (v + (1 - np.sqrt(2)) * b))
+        )
+        return sr  # J/(mol*K)
+
+    # 计算混合摩尔质量（kg/mol）
+    def M_mixture_kgpmol(self):
+        if self.comp2 is None or self.x1 == 1.0:
+            return self.comp1['M_kgpmol']
+        else:
+            return self.x1 * self.comp1['M_kgpmol'] + self.x2 * self.comp2['M_kgpmol']
+
+    # 从摩尔到质量单位的包装函数（h,s: 返回 J/kg, J/(kg*K)）
+    def h_phase_per_kg(self, T, p_MPa, phase='g', h_ideal_molar=0.0):
+        """
+        h_ideal_molar: 可传入理想气体摩尔焓相对于基准（J/mol）。若没有可传0。
+        返回 J/kg
+        """
+        h_res_mol = self.h_res(T, p_MPa, phase=phase)
+        h_mol = h_ideal_molar + h_res_mol
+        M = self.M_mixture_kgpmol()
+        return h_mol / M
+
+    def s_phase_per_kgK(self, T, p_MPa, phase='g', s_ideal_molar=0.0):
+        sr_mol = self.s_res(T, p_MPa, phase=phase)
+        s_mol = s_ideal_molar + sr_mol
+        M = self.M_mixture_kgpmol()
+        return s_mol / M
+
+# 使用示例（纯质）
+R290 = {'Tc': 369.89, 'pc': 4.2512, 'omega': 0.1521, 'M': 44.096}
+pure_R290 = PR_Generic(comp1=R290, comp2=None)
+print("纯R290, Zg @ 0.1 MPa 300K:", pure_R290.Z_gas(300, 0.1))
+print("纯R290, h_res (J/mol) gas:", pure_R290.h_res(300, 0.1))
+print("纯R290, h_res (J/kg) gas:", pure_R290.h_phase_per_kg(300, 0.1, phase='g'))
+
+# 使用示例（二元混合）
+R600a = {'Tc': 407.81, 'pc': 3.629, 'omega': 0.184, 'M': 58.122}
+mix = PR_Generic(comp1=R290, comp2=R600a, x1=0.5)
+print("混排Zg @ 0.1 MPa 300K:", mix.Z_gas(300, 0.1))
+print("混排, h_res (J/mol):", mix.h_res(300, 0.1, phase='g'))
+print("混排, h_res (J/kg):", mix.h_phase_per_kg(300, 0.1, phase='g'))

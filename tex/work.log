@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.141592653-2.6-0.999997 (TeX Live 2025) (preloaded format=xelatex 2025.4.3)  11 OCT 2025 14:26
+This is XeTeX, Version 3.141592653-2.6-0.999997 (TeX Live 2025) (preloaded format=xelatex 2025.4.1)  16 OCT 2025 21:58
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -537,19 +537,21 @@ LaTeX Warning: `h' float specifier changed to `ht'.
 
 [12]
 
-[13] (./work.aux)
+[13]
+
+[14] (./work.aux)
  ***********
 LaTeX2e <2024-11-01> patch level 2
 L3 programming layer <2022/08/05>
  ***********
  ) 
 Here is how much of TeX's memory you used:
- 10360 strings out of 473831
- 248670 string characters out of 5733138
+ 10362 strings out of 473831
+ 248732 string characters out of 5733138
  1152910 words of memory out of 5000000
- 33279 multiletter control sequences out of 15000+600000
+ 33281 multiletter control sequences out of 15000+600000
  565348 words of font info for 84 fonts, out of 8000000 for 9000
  1348 hyphenation exceptions out of 8191
  93i,11n,111p,360b,1712s stack positions out of 10000i,1000n,20000p,200000b,200000s
 
-Output written on work.pdf (13 pages).
+Output written on work.pdf (14 pages).

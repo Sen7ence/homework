@@ -527,5 +527,36 @@ print(R290.s_l(300, -95.80, 6.945, -3.597 * 1e-3, 7.290 * 1e-7, 1.4))
 \end{lstlisting}
 
 \subsection*{4-15}
+根据式(3.110)给出的混合法则，有：
+\begin{equation*}
+    a = x_1^2 a_1  + 2 x_1 x_2 (1 - k_{ij}) \sqrt{a_1 a_2} + x_2^2 a_2
+\end{equation*}
+% \begin{equation*}
+%     b = x_1 b_1 + x_2 b_2
+% \end{equation*}
+$a$对$T$求导，有
+\begin{equation*}
+    a'=x_1^2 a_1' + x_1 x_2 (1-k_{ij})(a_1'\sqrt{\frac{a_2}{a_1}} + a_2'\sqrt{\frac{a_1}{a_2}}) + x_2^2 a_2'
+\end{equation*}
+
+整个计算过程包括以下步骤：
+
+（1）查物性库得出各组分的临界温度$T_\mathrm{c}$、临界压力$p_\mathrm{c}$、偏心因子$\omega$、摩尔质量$M$和0℃时的饱和压力$p_\mathrm{s0}$；
+
+（2）计算$a$、$b$和$a'$；
+
+（3）计算$A$和$B$；
+
+（4）计算压缩因子$Z$的多项式系数$C_2, C_1, C_0$；
+
+（5）使用牛顿法分别计算压缩因子$Z$的液相值$Z_l$和气相值$Z_g$；
+
+（6）计算比体积$v$的液相值$v_l$和气相值$v_g$；
+
+（7）计算焓的余函数$h^\mathrm{r}$和熵的余函数$s^\mathrm{r}$；
+
+（8）计算焓$h$和熵$s$；
+
+（9）计算逸度$\hat{f}$和逸度系数$\hat{\phi}$。
 
 \end{document}
