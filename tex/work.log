@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.141592653-2.6-0.999997 (TeX Live 2025) (preloaded format=xelatex 2025.4.1)  16 OCT 2025 21:58
+This is XeTeX, Version 3.141592653-2.6-0.999997 (TeX Live 2025) (preloaded format=xelatex 2025.4.3)  20 OCT 2025 23:57
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -303,34 +303,41 @@ File: xetex.def 2022/09/22 v5.0n Graphics/color driver for xetex
 ))
 \Gin@req@height=\dimen192
 \Gin@req@width=\dimen193
+) (d:/texlive/2025/texmf-dist/tex/latex/float/float.sty
+Package: float 2001/11/08 v1.3d Float enhancements (AL)
+\c@float@type=\count312
+\float@exts=\toks24
+\float@box=\box58
+\@float@everytoks=\toks25
+\@floatcapt=\box59
 ) (d:/texlive/2025/texmf-dist/tex/latex/listings/listings.sty
-\lst@mode=\count312
-\lst@gtempboxa=\box58
-\lst@token=\toks24
-\lst@length=\count313
+\lst@mode=\count313
+\lst@gtempboxa=\box60
+\lst@token=\toks26
+\lst@length=\count314
 \lst@currlwidth=\dimen194
-\lst@column=\count314
-\lst@pos=\count315
+\lst@column=\count315
+\lst@pos=\count316
 \lst@lostspace=\dimen195
 \lst@width=\dimen196
-\lst@newlines=\count316
-\lst@lineno=\count317
+\lst@newlines=\count317
+\lst@lineno=\count318
 \lst@maxwidth=\dimen197
  (d:/texlive/2025/texmf-dist/tex/latex/listings/lstpatch.sty
 File: lstpatch.sty 2024/09/23 1.10c (Carsten Heinz)
 ) (d:/texlive/2025/texmf-dist/tex/latex/listings/lstmisc.sty
 File: lstmisc.sty 2024/09/23 1.10c (Carsten Heinz)
-\c@lstnumber=\count318
-\lst@skipnumbers=\count319
-\lst@framebox=\box59
+\c@lstnumber=\count319
+\lst@skipnumbers=\count320
+\lst@framebox=\box61
 ) (d:/texlive/2025/texmf-dist/tex/latex/listings/listings.cfg
 File: listings.cfg 2024/09/23 1.10c listings configuration
 ))
 Package: listings 2024/09/23 1.10c (Carsten Heinz)
  (d:/texlive/2025/texmf-dist/tex/xelatex/xecjk/xeCJK-listings.sty
 Package: xeCJK-listings 2022/08/05 v3.9.1 xeCJK patch file for listings
-\l__xeCJK_listings_max_char_int=\count320
-\l__xeCJK_listings_flag_int=\count321
+\l__xeCJK_listings_max_char_int=\count321
+\l__xeCJK_listings_flag_int=\count322
 ) (d:/texlive/2025/texmf-dist/tex/latex/xcolor/xcolor.sty
 Package: xcolor 2024/09/29 v3.02 LaTeX color extensions (UK)
  (d:/texlive/2025/texmf-dist/tex/latex/graphics-cfg/color.cfg
@@ -349,7 +356,7 @@ Package xcolor Info: Model `wave' substituted by `hsb' on input line 1372.
 ) (d:/texlive/2025/texmf-dist/tex/latex/multirow/multirow.sty
 Package: multirow 2024/11/12 v2.9 Span multiple rows of a table
 \multirow@colwidth=\skip62
-\multirow@cntb=\count322
+\multirow@cntb=\count323
 \multirow@dima=\skip63
 \bigstrutjot=\dimen198
 ) (d:/texlive/2025/texmf-dist/tex/latex/listings/lstlang1.sty
@@ -465,12 +472,12 @@ LaTeX Font Info:    Overwriting math alphabet `\mathtt' in version `bold'
 * \@reversemarginfalse
 * (1in=72.27pt=25.4mm, 1cm=28.453pt)
 
-\c@lstlisting=\count323
-LaTeX Font Info:    Trying to load font information for U+msa on input line 50.
+\c@lstlisting=\count324
+LaTeX Font Info:    Trying to load font information for U+msa on input line 43.
 (d:/texlive/2025/texmf-dist/tex/latex/amsfonts/umsa.fd
 File: umsa.fd 2013/01/14 v3.01 AMS symbols A
 )
-LaTeX Font Info:    Trying to load font information for U+msb on input line 50.
+LaTeX Font Info:    Trying to load font information for U+msb on input line 43.
  (d:/texlive/2025/texmf-dist/tex/latex/amsfonts/umsb.fd
 File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 )
@@ -511,19 +518,10 @@ Package fontspec Info:
 [3]
 
 [4]
-File: ../chp3/figs/R290.png Graphic file (type bmp)
-<../chp3/figs/R290.png>
-File: ../chp3/figs/R600a.png Graphic file (type bmp)
-<../chp3/figs/R600a.png>
-
 
 [5]
 
 [6]
-
-LaTeX Warning: `h' float specifier changed to `ht'.
-
-
 
 [7]
 
@@ -532,6 +530,11 @@ LaTeX Warning: `h' float specifier changed to `ht'.
 [9]
 
 [10]
+File: ../main/figs/R290.png Graphic file (type bmp)
+<../main/figs/R290.png>
+File: ../main/figs/R600a.png Graphic file (type bmp)
+<../main/figs/R600a.png>
+
 
 [11]
 
@@ -539,19 +542,65 @@ LaTeX Warning: `h' float specifier changed to `ht'.
 
 [13]
 
-[14] (./work.aux)
+[14]
+
+[15]
+Missing character: There is no 标 (U+6807) in font [lmroman8-regular]:mapping=tex-text;!
+Missing character: There is no 准 (U+51C6) in font [lmroman8-regular]:mapping=tex-text;!
+Missing character: There is no 标 (U+6807) in font [lmroman8-regular]:mapping=tex-text;!
+Missing character: There is no 准 (U+51C6) in font [lmroman8-regular]:mapping=tex-text;!
+
+Overfull \hbox (7.49426pt too wide) in paragraph at lines 605--616
+ [][] 
+ []
+
+Missing character: There is no 标 (U+6807) in font [lmroman8-regular]:mapping=tex-text;!
+Missing character: There is no 准 (U+51C6) in font [lmroman8-regular]:mapping=tex-text;!
+Missing character: There is no 标 (U+6807) in font [lmroman8-regular]:mapping=tex-text;!
+Missing character: There is no 准 (U+51C6) in font [lmroman8-regular]:mapping=tex-text;!
+
+Overfull \hbox (7.49426pt too wide) in paragraph at lines 621--632
+ [][] 
+ []
+
+
+
+[16]
+Overfull \hbox (8.78958pt too wide) in paragraph at lines 671--672
+[]\TU/SimSun(0)/m/n/12 取 二 元 作 用 系 数 $\OML/cmm/m/it/12 k[] \OT1/cmr/m/n/12 = 0\OML/cmm/m/it/12 :\OT1/cmr/m/n/12 064$\TU/SimSun(0)/m/n/12 ，|  在 $\OML/cmm/m/it/12 p$\TU/lmr/m/n/12 =1.0MPa \TU/SimSun(0)/m/n/12 下 不 同 温 度 下 计 算 \TU/lmr/m/n/12 R290/R600a(50%/50%)
+ []
+
+Missing character: There is no 标 (U+6807) in font [lmroman8-regular]:mapping=tex-text;!
+Missing character: There is no 准 (U+51C6) in font [lmroman8-regular]:mapping=tex-text;!
+Missing character: There is no 标 (U+6807) in font [lmroman8-regular]:mapping=tex-text;!
+Missing character: There is no 准 (U+51C6) in font [lmroman8-regular]:mapping=tex-text;!
+
+Overfull \hbox (7.49426pt too wide) in paragraph at lines 676--687
+ [][] 
+ []
+
+
+
+[17]
+File: ../main/figs/R290R600a_f.png Graphic file (type bmp)
+<../main/figs/R290R600a_f.png>
+
+
+[18]
+
+[19] (./work.aux)
  ***********
 LaTeX2e <2024-11-01> patch level 2
 L3 programming layer <2022/08/05>
  ***********
  ) 
 Here is how much of TeX's memory you used:
- 10362 strings out of 473831
- 248732 string characters out of 5733138
- 1152910 words of memory out of 5000000
- 33281 multiletter control sequences out of 15000+600000
- 565348 words of font info for 84 fonts, out of 8000000 for 9000
+ 10483 strings out of 473831
+ 251398 string characters out of 5733138
+ 1163405 words of memory out of 5000000
+ 33392 multiletter control sequences out of 15000+600000
+ 567979 words of font info for 99 fonts, out of 8000000 for 9000
  1348 hyphenation exceptions out of 8191
- 93i,11n,111p,360b,1712s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 93i,11n,111p,360b,1710s stack positions out of 10000i,1000n,20000p,200000b,200000s
 
-Output written on work.pdf (14 pages).
+Output written on work.pdf (19 pages).
