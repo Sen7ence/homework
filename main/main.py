@@ -194,7 +194,7 @@ class PR:
         ax.set_xlabel(r"$v$ (m³/kg)")
         ax.set_ylabel(r"$T$ (K)")
         # 标题
-        ax.set_title(f"{fluid_name}  $T$–$v$ at $p$ = {p:.1f} MPa")
+        # ax.set_title(f"{fluid_name}  $T$–$v$ at $p$ = {p:.1f} MPa")
         ax.grid(True)
         ax.set_xscale("log")  # 使用对数刻度
         ax.legend(loc="upper left", frameon=True, fancybox=True, framealpha=0.9)
@@ -326,11 +326,12 @@ class PR:
         return sg
 
     # 计算逸度系数
-    def phi(self, T, p):
+    # 气相
+    def phi_g(self, T, p):
         Zg = self.Zg(T, p)
         a1, a2, a, b1, b2, b, da = self.params(T)
         A, B = self.AB(T, p)
-        phi1 = np.exp(
+        phi_g1 = np.exp(
             (b1 / b) * (Zg - 1)
             - np.log(Zg - B)
             - A
@@ -341,7 +342,7 @@ class PR:
             )
             * np.log((Zg + 2.414 * B) / (Zg - 0.414 * B))
         )
-        phi2 = np.exp(
+        phi_g2 = np.exp(
             (b2 / b) * (Zg - 1)
             - np.log(Zg - B)
             - A
@@ -352,16 +353,53 @@ class PR:
             )
             * np.log((Zg + 2.414 * B) / (Zg - 0.414 * B))
         )
-        return phi1, phi2
+        return phi_g1, phi_g2
+
+    # 液相
+    def phi_l(self, T, p):
+        Zl = self.Zl(T, p)
+        a1, a2, a, b1, b2, b, da = self.params(T)
+        A, B = self.AB(T, p)
+        phi_l1 = np.exp(
+            (b1 / b) * (Zl - 1)
+            - np.log(Zl - B)
+            - A
+            / (B * np.sqrt(8))
+            * (
+                2 * (self.x2 * (1 - self.kij) * (a1 * a2) ** 0.5 + self.x1 * a1) / a
+                - b1 / b
+            )
+            * np.log((Zl + 2.414 * B) / (Zl - 0.414 * B))
+        )
+        phi_l2 = np.exp(
+            (b2 / b) * (Zl - 1)
+            - np.log(Zl - B)
+            - A
+            / (B * np.sqrt(8))
+            * (
+                2 * (self.x1 * (1 - self.kij) * (a1 * a2) ** 0.5 + self.x2 * a2) / a
+                - b2 / b
+            )
+            * np.log((Zl + 2.414 * B) / (Zl - 0.414 * B))
+        )
+        return phi_l1, phi_l2
 
     # 计算逸度
-    def f(self, T, p):  # MPa
-        phi1, phi2 = self.phi(T, p)
-        f1 = self.x1 * phi1 * p
-        f2 = self.x2 * phi2 * p
-        return f1, f2
+    # 气相
+    def f_g(self, T, p):  # MPa
+        phi_g1, phi_g2 = self.phi_g(T, p)
+        f_g1 = self.x1 * phi_g1 * p
+        f_g2 = self.x2 * phi_g2 * p
+        return f_g1, f_g2
 
-    # 绘制f-T、phi-T图
+    # 液相
+    def f_l(self, T, p):  # MPa
+        phi_l1, phi_l2 = self.phi_l(T, p)
+        f_l1 = self.x1 * phi_l1 * p
+        f_l2 = self.x2 * phi_l2 * p
+        return f_l1, f_l2
+
+    # 绘制溶液气相f-T、phi-T图
     def plot_fT(self, fluid_name, p, T_min, T_max, nT=11):
         T_grid = np.linspace(T_min, T_max, nT)  # 温度网格
         phi_grid1 = np.empty_like(T_grid)  # 组分1逸度系数网格
@@ -369,46 +407,100 @@ class PR:
         f_grid1 = np.empty_like(T_grid)  # 组分1逸度网格
         f_grid2 = np.empty_like(T_grid)  # 组分2逸度网格
 
-        # 计算逸度系数和逸度
-        for i, T in enumerate(T_grid):
-            phi1, phi2 = self.phi(T, p)
-            f1, f2 = self.f(T, p)
-            phi_grid1[i] = phi1
-            phi_grid2[i] = phi2
-            f_grid1[i] = f1
-            f_grid2[i] = f2
-
-        # 创建图像
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
-
-        # 逸度系数-温度图
-        ax1.plot(T_grid, phi_grid1, "b-o", linewidth=2, label="R290", markersize=6)
-        ax1.plot(T_grid, phi_grid2, "r-s", linewidth=2, label="R600a", markersize=6)
-        ax1.set_xlabel(r"$T$ (K)", fontsize=12)
-        ax1.set_ylabel(r"$\hat{\phi}$", fontsize=12)
-        ax1.set_title(rf"{fluid_name} $\hat{{\phi}}$ at $p$ = {p:.1f} MPa", fontsize=12)
-        ax1.grid(True, linestyle="--", alpha=0.7)
-        ax1.legend(loc="best", frameon=True, fancybox=True, framealpha=0.9)
-
-        # 逸度-温度图
-        ax2.plot(T_grid, f_grid1, "b-o", linewidth=2, label="R290", markersize=6)
-        ax2.plot(T_grid, f_grid2, "r-s", linewidth=2, label="R600a", markersize=6)
-        ax2.set_xlabel(r"$T$ (K)", fontsize=12)
-        ax2.set_ylabel(r"$\hat{f}$ (MPa)", fontsize=12)
-        ax2.set_title(rf"{fluid_name} $\hat{{f}}$ at $p$ = {p:.1f} MPa", fontsize=12)
-        ax2.grid(True, linestyle="--", alpha=0.7)
-        ax2.legend(loc="best", frameon=True, fancybox=True, framealpha=0.9)
-
-        plt.tight_layout()
-
-        # 保存图像
         base_dir = os.path.dirname(os.path.abspath(__file__))
         fig_dir = os.path.join(base_dir, "figs")
         os.makedirs(fig_dir, exist_ok=True)
 
-        filename = f"{fluid_name}_f.png"
-        savepath = os.path.join(fig_dir, filename)
+        # 计算逸度系数和逸度
+        for i, T in enumerate(T_grid):
+            phi_g1, phi_g2 = self.phi_g(T, p)
+            f_g1, f_g2 = self.f_g(T, p)
+            phi_grid1[i] = phi_g1
+            phi_grid2[i] = phi_g2
+            f_grid1[i] = f_g1
+            f_grid2[i] = f_g2
 
+        # T-phi
+        fig_phi = plt.figure(figsize=(8, 6))
+        ax_phi = fig_phi.add_subplot(1, 1, 1)
+        ax_phi.plot(T_grid, phi_grid1, "b-o", linewidth=2, label="R290", markersize=6)
+        ax_phi.plot(T_grid, phi_grid2, "r-s", linewidth=2, label="R600a", markersize=6)
+        ax_phi.set_xlabel(r"$T$ (K)", fontsize=12)
+        ax_phi.set_ylabel(r"$\hat{\phi}$", fontsize=12)
+        # ax_phi.set_title(
+        #    rf"{fluid_name} $\hat{{\phi}}$ at $p$ = {p:.1f} MPa", fontsize=12
+        # )
+        ax_phi.grid(True, linestyle="--", alpha=0.7)
+        ax_phi.legend(loc="best", frameon=True, fancybox=True, framealpha=0.9)
+        fig_phi.tight_layout()
+        savepath_phi = os.path.join(fig_dir, f"{fluid_name}_phi.png")
+        fig_phi.savefig(savepath_phi, dpi=600, bbox_inches="tight", transparent=False)
+        plt.close(fig_phi)
+
+        # T-f
+        fig_f = plt.figure(figsize=(8, 6))
+        ax_f = fig_f.add_subplot(111)
+        ax_f.plot(T_grid, f_grid1, "b-o", linewidth=2, label="R290", markersize=6)
+        ax_f.plot(T_grid, f_grid2, "r-s", linewidth=2, label="R600a", markersize=6)
+        ax_f.set_xlabel(r"$T$ (K)", fontsize=12)
+        ax_f.set_ylabel(r"$\hat{f}$ (MPa)", fontsize=12)
+        # ax_f.set_title(rf"{fluid_name} $\hat{{f}}$ at $p$ = {p:.1f} MPa", fontsize=12)
+        ax_f.grid(True, linestyle="--", alpha=0.7)
+        ax_f.legend(loc="best", frameon=True, fancybox=True, framealpha=0.9)
+        fig_f.tight_layout()
+        savepath_f = os.path.join(fig_dir, f"{fluid_name}_f.png")
+        fig_f.savefig(savepath_f, dpi=600, bbox_inches="tight", transparent=False)
+        plt.close(fig_f)
+
+    # p-T相图
+    def plot_pT(self, fluid_name, T_min, T_max, nT=220):
+        T_grid = np.linspace(T_min, T_max, nT)  # 温度网格
+        p_grid = np.empty_like(T_grid)  # 压力网格
+        # 计算饱和压力
+        for i, T in enumerate(T_grid):
+            # 使用二分法求解饱和压力
+            p_low = 0.001  # MPa
+            p_high = 10.0  # MPa
+            for _ in range(100):
+                p_mid = (p_low + p_high) / 2
+                phi_l1, phi_l2 = self.phi_l(T, p_mid)
+                phi_g1, phi_g2 = self.phi_g(T, p_mid)
+                f_l1 = self.x1 * phi_l1 * p_mid
+                f_l2 = self.x2 * phi_l2 * p_mid
+                f_g1 = self.x1 * phi_g1 * p_mid
+                f_g2 = self.x2 * phi_g2 * p_mid
+                if (f_l1 - f_g1) > 0:
+                    p_high = p_mid
+                else:
+                    p_low = p_mid
+                if abs(p_high - p_low) < 1e-6:
+                    break
+            p_grid[i] = p_mid
+        fig, ax = plt.subplots(1, figsize=(8, 6))  # 创建图像和坐标轴
+        # 主曲线
+        ax.plot(
+            T_grid,
+            p_grid,
+            linewidth=2,
+            label=fluid_name,
+        )
+        # 轴标签
+        ax.set_xlabel(r"$T$ (K)")
+        ax.set_ylabel(r"$p$ (MPa)")
+        # 标题
+        # ax.set_title(f"{fluid_name}  $p$–$T$ Saturation Curve")
+        ax.grid(True)
+        ax.legend(loc="upper left", frameon=True, fancybox=True, framealpha=0.9)
+
+        # 固定保存路径为脚本同目录下的 figs 文件夹
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        fig_dir = os.path.join(base_dir, "figs")
+        os.makedirs(fig_dir, exist_ok=True)
+
+        # 文件名固定为"流体名称_pT.png"
+        filename = f"{fluid_name}_pT.png"
+        savepath = os.path.join(fig_dir, filename)
+        # 保存图像，固定参数
         fig.savefig(savepath, dpi=600, bbox_inches="tight", transparent=False)
         plt.close(fig)
 
@@ -581,7 +673,18 @@ if __name__ == "__main__":
     # R290R600a.plot_fT("R290R600a", 1.4, 350, 450, 11)
 
     # 7-4
-
+    R290 = PR(
+        Tc1=369.89,  # K
+        pc1=4.2512,  # MPa
+        omega1=0.1521,  # 无量纲
+        M1=44.096,  # g/mol
+        x1=1.0,
+        Tc2=369.89,
+        pc2=4.2512,
+        omega2=0.1521,
+        M2=44.096,
+        kij=0.064,
+        ps0=0.47446,
+    )
+    R290.plot_pT("R290", 200, 450, 220)
     # 7-5
-
-    pass

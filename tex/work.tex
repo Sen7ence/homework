@@ -7,6 +7,9 @@
 \usepackage{listings}
 \usepackage{xcolor}
 \usepackage{multirow}
+\usepackage{caption}
+% 仅针对表格：表题在上方（默认即可），表题与表格之间留 8pt
+\captionsetup[table]{skip=8pt}
 \graphicspath{{../main/figs/}}
 
 % 定义颜色
@@ -81,6 +84,9 @@ import os
 plt.rcParams["font.family"] = "serif"
 plt.rcParams["font.serif"] = ["Times New Roman"]
 plt.rcParams["mathtext.fontset"] = "stix"
+plt.rcParams["font.size"] = 14  # 增大全局字体
+plt.rcParams["axes.linewidth"] = 1.5  # 增粗坐标轴
+
 
 class PR:
     def __init__(self, Tc1, pc1, omega1, M1, x1, Tc2, pc2, omega2, M2, kij, ps0):
@@ -222,12 +228,16 @@ class PR:
         # 计算比体积
         for i, T in enumerate(T_grid):
             if T < Tsat:
-                v_grid[i] = self.vl(T, p)
+                v_grid[i] = self.vl(T, p) / (self.x1 * self.M1 + self.x2 * self.M2)
             elif T > Tsat:
-                v_grid[i] = self.vg(T, p)
+                v_grid[i] = self.vg(T, p) / (self.x1 * self.M1 + self.x2 * self.M2)
             else:
-                v_grid[i] = 0.5 * (self.vl(T, p) + self.vg(T, p))
-        fig, ax = plt.subplots()  # 创建图像和坐标轴
+                v_grid[i] = (
+                    0.5
+                    * (self.vl(T, p) + self.vg(T, p))
+                    / (self.x1 * self.M1 + self.x2 * self.M2)
+                )
+        fig, ax = plt.subplots(1, figsize=(8, 6))  # 创建图像和坐标轴
         # 主曲线
         ax.plot(
             v_grid,
@@ -259,10 +269,10 @@ class PR:
         ax.set_yticks(yt)
         ax.set_yticklabels(labels)
         # 轴标签
-        ax.set_xlabel(r"$v$ (m³/mol)")
+        ax.set_xlabel(r"$v$ (m³/kg)")
         ax.set_ylabel(r"$T$ (K)")
         # 标题
-        ax.set_title(f"{fluid_name}  $v$–$T$ at $p$ = {p:.1f} MPa")
+        # ax.set_title(f"{fluid_name}  $T$–$v$ at $p$ = {p:.1f} MPa")
         ax.grid(True)
         ax.set_xscale("log")  # 使用对数刻度
         ax.legend(loc="upper left", frameon=True, fancybox=True, framealpha=0.9)
@@ -277,7 +287,7 @@ class PR:
         savepath = os.path.join(fig_dir, filename)
 
         # 保存图像，固定参数
-        fig.savefig(savepath, dpi=300, bbox_inches="tight", transparent=False)
+        fig.savefig(savepath, dpi=600, bbox_inches="tight", transparent=False)
         plt.close(fig)
 
     # 计算焓的余函数
@@ -336,13 +346,13 @@ class PR:
 
     # 计算c_p/T积分
     def cpT(self, T, A, B, C, D):
-        cpT = (
+        cp = (
             A * np.log(T / 273.15)
             + B * (T - 273.15)
             + C / 2 * (T**2 - 273.15**2)
             + D / 3 * (T**3 - 273.15**3)
         )
-        return cpT
+        return cp
 
     # 计算焓和熵
     # 液相
@@ -393,6 +403,7 @@ class PR:
         )  # J/(kg*K)
         return sg
 
+    # 计算逸度系数
     def phi(self, T, p):
         Zg = self.Zg(T, p)
         a1, a2, a, b1, b2, b, da = self.params(T)
@@ -402,7 +413,10 @@ class PR:
             - np.log(Zg - B)
             - A
             / (B * np.sqrt(8))
-            * (2 * (self.x2 * (a1 * a2) ** 0.5 + self.x1 * a1) / a - b1 / b)
+            * (
+                2 * (self.x2 * (1 - self.kij) * (a1 * a2) ** 0.5 + self.x1 * a1) / a
+                - b1 / b
+            )
             * np.log((Zg + 2.414 * B) / (Zg - 0.414 * B))
         )
         phi2 = np.exp(
@@ -410,18 +424,75 @@ class PR:
             - np.log(Zg - B)
             - A
             / (B * np.sqrt(8))
-            * (2 * (self.x1 * (a1 * a2) ** 0.5 + self.x2 * a2) / a - b2 / b)
+            * (
+                2 * (self.x1 * (1 - self.kij) * (a1 * a2) ** 0.5 + self.x2 * a2) / a
+                - b2 / b
+            )
             * np.log((Zg + 2.414 * B) / (Zg - 0.414 * B))
         )
         return phi1, phi2
 
+    # 计算逸度
     def f(self, T, p):  # MPa
         phi1, phi2 = self.phi(T, p)
         f1 = self.x1 * phi1 * p
         f2 = self.x2 * phi2 * p
         return f1, f2
+
+    # 绘制f-T、phi-T图
+    def plot_fT(self, fluid_name, p, T_min, T_max, nT=11):
+        T_grid = np.linspace(T_min, T_max, nT)  # 温度网格
+        phi_grid1 = np.empty_like(T_grid)  # 组分1逸度系数网格
+        phi_grid2 = np.empty_like(T_grid)  # 组分2逸度系数网格
+        f_grid1 = np.empty_like(T_grid)  # 组分1逸度网格
+        f_grid2 = np.empty_like(T_grid)  # 组分2逸度网格
+
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        fig_dir = os.path.join(base_dir, "figs")
+        os.makedirs(fig_dir, exist_ok=True)
+
+        # 计算逸度系数和逸度
+        for i, T in enumerate(T_grid):
+            phi1, phi2 = self.phi(T, p)
+            f1, f2 = self.f(T, p)
+            phi_grid1[i] = phi1
+            phi_grid2[i] = phi2
+            f_grid1[i] = f1
+            f_grid2[i] = f2
+
+        # T-phi
+        fig_phi = plt.figure(figsize=(8, 6))
+        ax_phi = fig_phi.add_subplot(1, 1, 1)
+        ax_phi.plot(T_grid, phi_grid1, "b-o", linewidth=2, label="R290", markersize=6)
+        ax_phi.plot(T_grid, phi_grid2, "r-s", linewidth=2, label="R600a", markersize=6)
+        ax_phi.set_xlabel(r"$T$ (K)", fontsize=12)
+        ax_phi.set_ylabel(r"$\hat{\phi}$", fontsize=12)
+        # ax_phi.set_title(
+        #    rf"{fluid_name} $\hat{{\phi}}$ at $p$ = {p:.1f} MPa", fontsize=12
+        # )
+        ax_phi.grid(True, linestyle="--", alpha=0.7)
+        ax_phi.legend(loc="best", frameon=True, fancybox=True, framealpha=0.9)
+        fig_phi.tight_layout()
+        savepath_phi = os.path.join(fig_dir, f"{fluid_name}_phi.png")
+        fig_phi.savefig(savepath_phi, dpi=600, bbox_inches="tight", transparent=False)
+        plt.close(fig_phi)
+
+        # T-f
+        fig_f = plt.figure(figsize=(8, 6))
+        ax_f = fig_f.add_subplot(111)
+        ax_f.plot(T_grid, f_grid1, "b-o", linewidth=2, label="R290", markersize=6)
+        ax_f.plot(T_grid, f_grid2, "r-s", linewidth=2, label="R600a", markersize=6)
+        ax_f.set_xlabel(r"$T$ (K)", fontsize=12)
+        ax_f.set_ylabel(r"$\hat{f}$ (MPa)", fontsize=12)
+        # ax_f.set_title(rf"{fluid_name} $\hat{{f}}$ at $p$ = {p:.1f} MPa", fontsize=12)
+        ax_f.grid(True, linestyle="--", alpha=0.7)
+        ax_f.legend(loc="best", frameon=True, fancybox=True, framealpha=0.9)
+        fig_f.tight_layout()
+        savepath_f = os.path.join(fig_dir, f"{fluid_name}_f.png")
+        fig_f.savefig(savepath_f, dpi=600, bbox_inches="tight", transparent=False)
+        plt.close(fig_f)
     
-    if __name__ == "__main__":
+    if __name__ == "__main__": # 主程序
         pass
 \end{lstlisting}
 
@@ -442,7 +513,7 @@ R290在1.4MPa下的$T$-$v$图和R600a在0.6MPa下的$T$-$v$图如下：
     \caption{R600a在0.6MPa下的$T$-$v$图}
 \end{figure}
 
-计算程序如下：
+主程序如下：
 
 \begin{lstlisting}
     R290 = PR(
@@ -492,9 +563,9 @@ $v_\mathrm{R134a}=0.24679\mathrm{m^3/kg}$，$v_\mathrm{R1234yf}=0.22031\mathrm{m
 
 可以看出，三种制冷剂的比体积相差不大，R134a的比体积略大于另外两种，故采用R1234yf和R1234ze(E)作为R134a的替代品是合理的。
 
-计算程序为：
+主程序如下：
 \begin{lstlisting}
-        R134a = PR(
+    R134a = PR(
         Tc1=374.21,
         pc1=4.0593,
         omega1=0.326,
@@ -534,9 +605,9 @@ $v_\mathrm{R134a}=0.24679\mathrm{m^3/kg}$，$v_\mathrm{R1234yf}=0.22031\mathrm{m
         ps0=0.49314,
     )
 
-print(R134a.vg(308.15, 0.1))
-print(R1234yf.vg(308.15, 0.1))
-print(R1234ze.vg(308.15, 0.1))
+    print(R134a.vg(308.15, 0.1))
+    print(R1234yf.vg(308.15, 0.1))
+    print(R1234ze.vg(308.15, 0.1))
 \end{lstlisting}
 
 \subsection*{3-15}
@@ -544,6 +615,7 @@ print(R1234ze.vg(308.15, 0.1))
 在压力$p=0.1\mathrm{MPa}$、$0.2\mathrm{MPa}$、$0.3\mathrm{MPa}$，温度$T=300\mathrm{K}$时，不同的$k_{ij}$条件下，混合制冷剂R290/R600a的比体积计算结果与计算偏差如表1所示，表中计算偏差是相对于$k_{ij}=0.064$时的比体积计算结果而言的。可以看出，$k_{ij}$取0.1、0和-0.1时，计算结果与$k_{ij}=0.064$时的比体积计算结果偏差逐渐增大，且偏差均小于1\%。
 \begin{table}[h]
 \centering
+\caption{不同$k_{ij}$条件下混合制冷剂R290/R600a的比体积计算结果与计算偏差}
 \begin{tabular}{c c c c}
 \hline
 $p$ (MPa) & $k_{ij}$ &  $v$ (m³/mol) &误差 (\%) \\
@@ -564,7 +636,6 @@ $p$ (MPa) & $k_{ij}$ &  $v$ (m³/mol) &误差 (\%) \\
  & -0.1 & 0.15171 & 0.66785  \\
 \hline
 \end{tabular}
-\caption{不同$k_{ij}$条件下混合制冷剂R290/R600a的比体积计算结果与计算偏差}
 \end{table}
 
 代码如下：
@@ -597,14 +668,14 @@ $p$ (MPa) & $k_{ij}$ &  $v$ (m³/mol) &误差 (\%) \\
 
 \subsection*{4-13}
 
-利用程序分别计算在1.4MPa下不同温度$T$下R290的液相焓和熵，以及在0.6MPa下不同温度$T$下R600a的液相焓和熵，计算结果与标准值对比如表2和表3所示，可以看出，计算结果与标准值误差均小于1\%。
+利用主程序分别计算在1.4MPa下不同温度$T$下R290的液相焓和熵，以及在0.6MPa下不同温度$T$下R600a的液相焓和熵，计算结果与标准值对比如表2和表3所示，可以看出，计算结果与标准值误差均小于1\%。
 
 \begin{table}[h]
 \centering
 \caption{1.4MPa下不同温度$T$下R290的液相焓和熵计算结果与标准值对比}
 \begin{tabular}{c c c c c c c}
 \hline
-$T$ (K) & $h$ (kJ/kg) &$h_\mathrm{标准}$(kJ/kg) & $s$ (Jk/(kg·K)) &$s_\mathrm{标准}$(kJ/(kg·K))& $h$误差\%&$s$误差\%\\
+$T$ (K) & $h$ (kJ/kg) &$h_\text{标准}$(kJ/kg) & $s$ (kJ/(kg·K)) &$s_\text{标准}$(kJ/(kg·K))& $h$误差\%&$s$误差\%\\
 \hline
 260 & 168.686& 170.083& 0.876& 0.881& 0.821& 0.567\\
 270 & 192.542& 194.346& 0.966& 0.973& 0.928& 0.719\\
@@ -620,7 +691,7 @@ $T$ (K) & $h$ (kJ/kg) &$h_\mathrm{标准}$(kJ/kg) & $s$ (Jk/(kg·K)) &$s_\mathrm
 \caption{0.6MPa下不同温度$T$下R600a的液相焓和熵计算结果与标准值对比}
 \begin{tabular}{c c c c c c c}
 \hline
-$T$ (K) & $h$ (kJ/kg) &$h_\mathrm{标准}$(kJ/kg) & $s$ (kJ/(kg·K)) &$s_\mathrm{标准}$(kJ/(kg·K))& $h$误差\%&$s$误差\%\\
+$T$ (K) & $h$ (kJ/kg) &$h_\text{标准}$(kJ/kg) & $s$ (kJ/(kg·K)) &$s_\text{标准}$(kJ/(kg·K))& $h$误差\%&$s$误差\%\\
 \hline
 260 & 171.745& 171.556& 0.891& 0.891& 0.110& 0\\
 270 & 193.349& 193.946& 0.973& 0.975& 0.308& 0.205\\
@@ -631,7 +702,7 @@ $T$ (K) & $h$ (kJ/kg) &$h_\mathrm{标准}$(kJ/kg) & $s$ (kJ/(kg·K)) &$s_\mathrm
 \end{tabular}
 \end{table}
 
-程序如下：
+主程序如下：
 \begin{lstlisting}
     R290 = PR(
         Tc1=369.89,  # K
@@ -675,7 +746,7 @@ $T$ (K) & $h$ (kJ/kg) &$h_\mathrm{标准}$(kJ/kg) & $s$ (kJ/(kg·K)) &$s_\mathrm
 \caption{1.0MPa下不同温度$T$下R290/R600a(50\%/50\%)混合制冷剂的液相焓和熵计算结果与标准值对比}
 \begin{tabular}{c c c c c c c}
 \hline
-$T$ (K) & $h$ (kJ/kg) &$h_\mathrm{标准}$(kJ/kg) & $s$ (kJ/(kg·K)) &$s_\mathrm{标准}$(kJ/(kg·K))& $h$误差\%&$s$误差\%\\
+$T$ (K) & $h$ (kJ/kg) &$h_\text{标准}$(kJ/kg) & $s$ (kJ/(kg·K)) &$s_\text{标准}$(kJ/(kg·K))& $h$误差\%&$s$误差\%\\
 \hline
 260 & 170.449& 170.056& 0.885& 0.889& 0.231& 0.450\\
 270 & 193.011& 193.144& 0.970& 0.979& 0.069& 0.919\\
@@ -686,7 +757,7 @@ $T$ (K) & $h$ (kJ/kg) &$h_\mathrm{标准}$(kJ/kg) & $s$ (kJ/(kg·K)) &$s_\mathrm
 \end{tabular}
 \end{table}
 
-程序如下：
+主程序如下：
 \begin{lstlisting}
     R290R600a = PR(
         Tc1=369.89,
@@ -709,14 +780,20 @@ $T$ (K) & $h$ (kJ/kg) &$h_\mathrm{标准}$(kJ/kg) & $s$ (kJ/(kg·K)) &$s_\mathrm
 \section*{第六章}
 \subsection*{6-11}
 
-推导过程见作业，1.4MPa下R290/R600a混合制冷剂的$\hat{\phi}$-$T$图和$\hat{f}$-$T$图如下：
+推导过程见作业手写部分，1.4MPa下R290/R600a混合制冷剂的$\hat{\phi}$-$T$图和$\hat{f}$-$T$图如下：
 \begin{figure}[H]
     \centering
-    \includegraphics[width=1\textwidth]{R290R600a_f.png}
-    \caption{1.4MPa下R290/R600a混合制冷剂的$\hat{\phi}$-$T$图和$\hat{f}$-$T$}
+    \includegraphics[width=0.7\textwidth]{R290R600a_f.png}
+    \caption{1.4MPa下R290/R600a混合制冷剂的$\hat{\phi}$-$T$图}
 \end{figure}
 
-程序如下：
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{R290R600a_f.png}
+    \caption{1.4MPa下R290/R600a混合制冷剂的$\hat{f}$-$T$图}
+\end{figure}
+
+主程序如下：
 \begin{lstlisting}
     R290R600a = PR(
         Tc1=369.89,
