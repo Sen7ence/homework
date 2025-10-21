@@ -452,57 +452,53 @@ class PR:
         fig_f.savefig(savepath_f, dpi=600, bbox_inches="tight", transparent=False)
         plt.close(fig_f)
 
-    # p-T相图
-    def plot_pT(self, fluid_name, T_min, T_max, nT=220):
-        T_grid = np.linspace(T_min, T_max, nT)  # 温度网格
-        p_grid = np.empty_like(T_grid)  # 压力网格
-        # 计算饱和压力
+    def plot_pT(self, fluid_name):
+        T_min = 200  # K
+        T_max = 325  # K
+        dT = 0.5  # K
+        p_min = 3e5  # Pa
+        p_max = self.pc1  # Pa
+        dp = 100  # Pa
+
+        nT = int((T_max - T_min) / dT) + 1
+        T_grid = T_min + np.arange(nT) * dT  # 温度网格
+
+        p_sat = np.full_like(T_grid, np.nan)
+
         for i, T in enumerate(T_grid):
-            # 使用二分法求解饱和压力
-            p_low = 0.001  # MPa
-            p_high = 10.0  # MPa
-            for _ in range(100):
-                p_mid = (p_low + p_high) / 2
-                phi_l1, phi_l2 = self.phi_l(T, p_mid)
-                phi_g1, phi_g2 = self.phi_g(T, p_mid)
-                f_l1 = self.x1 * phi_l1 * p_mid
-                f_l2 = self.x2 * phi_l2 * p_mid
-                f_g1 = self.x1 * phi_g1 * p_mid
-                f_g2 = self.x2 * phi_g2 * p_mid
-                if (f_l1 - f_g1) > 0:
-                    p_high = p_mid
-                else:
-                    p_low = p_mid
-                if abs(p_high - p_low) < 1e-6:
+            p = p_min
+            while p <= p_max:
+                if abs(self.Zg(T, p / 1e6) - self.Zl(T, p / 1e6)) < 1e-3:
+                    p_sat[i] = p
                     break
-            p_grid[i] = p_mid
-        fig, ax = plt.subplots(1, figsize=(8, 6))  # 创建图像和坐标轴
-        # 主曲线
-        ax.plot(
-            T_grid,
-            p_grid,
-            linewidth=2,
-            label=fluid_name,
-        )
-        # 轴标签
-        ax.set_xlabel(r"$T$ (K)")
-        ax.set_ylabel(r"$p$ (MPa)")
-        # 标题
-        # ax.set_title(f"{fluid_name}  $p$–$T$ Saturation Curve")
-        ax.grid(True)
-        ax.legend(loc="upper left", frameon=True, fancybox=True, framealpha=0.9)
+                p += dp
 
-        # 固定保存路径为脚本同目录下的 figs 文件夹
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-        fig_dir = os.path.join(base_dir, "figs")
-        os.makedirs(fig_dir, exist_ok=True)
+        mask = np.isfinite(p_sat)
+        if np.any(mask):
+            p_plot = p_sat[mask] / 1e6  # 转换为 MPa
+            T_plot = T_grid[mask]
 
-        # 文件名固定为"流体名称_pT.png"
-        filename = f"{fluid_name}_pT.png"
-        savepath = os.path.join(fig_dir, filename)
-        # 保存图像，固定参数
-        fig.savefig(savepath, dpi=600, bbox_inches="tight", transparent=False)
-        plt.close(fig)
+            fig, ax = plt.subplots(1, figsize=(8, 6))
+            ax.plot(T_plot, p_plot, linewidth=2, label=fluid_name)
+            ax.set_xlabel(r"$T$ (K)")
+            ax.set_ylabel(r"$p_{\mathrm{sat}}$ (MPa)")
+
+            y_max = np.ceil(p_plot.max() / 0.25) * 0.25
+            ax.set_ylim(0, y_max)
+            ax.set_yticks(np.arange(0, y_max + 0.25, 0.25))
+
+            ax.grid(True)
+            ax.legend(loc="upper left", frameon=True, fancybox=True, framealpha=0.9)
+
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            fig_dir = os.path.join(base_dir, "figs")
+            os.makedirs(fig_dir, exist_ok=True)
+            savepath = os.path.join(fig_dir, f"{fluid_name}_pT.png")
+            fig.savefig(savepath, dpi=600, bbox_inches="tight", transparent=False)
+            plt.close(fig)
+
+        # 返回原始数据，便于外部检视或另行处理
+        return T_grid, p_sat
 
 
 if __name__ == "__main__":
@@ -673,18 +669,66 @@ if __name__ == "__main__":
     # R290R600a.plot_fT("R290R600a", 1.4, 350, 450, 11)
 
     # 7-4
-    R290 = PR(
-        Tc1=369.89,  # K
-        pc1=4.2512,  # MPa
-        omega1=0.1521,  # 无量纲
-        M1=44.096,  # g/mol
-        x1=1.0,
-        Tc2=369.89,
-        pc2=4.2512,
-        omega2=0.1521,
-        M2=44.096,
-        kij=0.064,
-        ps0=0.47446,
-    )
-    R290.plot_pT("R290", 200, 450, 220)
+    # R290 = PR(
+    #     Tc1=369.89,  # K
+    #     pc1=4.2512,  # MPa
+    #     omega1=0.1521,  # 无量纲
+    #     M1=44.096,  # g/mol
+    #     x1=1.0,
+    #     Tc2=369.89,
+    #     pc2=4.2512,
+    #     omega2=0.1521,
+    #     M2=44.096,
+    #     kij=0.064,
+    #     ps0=0.47446,
+    # )
+    # R290.plot_pT("R290")
+
+    # R600a = PR(
+    #     Tc1=407.81,
+    #     pc1=3.629,
+    #     omega1=0.184,
+    #     M1=58.122,  # R600a
+    #     x1=1.0,
+    #     Tc2=407.81,
+    #     pc2=3.629,
+    #     omega2=0.184,
+    #     M2=58.122,  # R600a
+    #     kij=0.0,
+    #     ps0=0.15696,
+    # )
+    # R600a.plot_pT("R600a")
+
+    # R1234yf = PR(
+    #     Tc1=367.85,
+    #     pc1=3.3822,
+    #     omega1=0.276,
+    #     M1=114.04,  # R1234yf
+    #     x1=1.0,
+    #     Tc2=367.85,
+    #     pc2=3.3822,
+    #     omega2=0.276,
+    #     M2=114.04,  # R1234yf
+    #     kij=0.0,
+    #     ps0=0.42483,
+    # )
+    # R1234yf.plot_pT("R1234yf")
+
+    # R1234ze = PR(
+    #     Tc1=382.75,
+    #     pc1=3.6349,
+    #     omega1=0.313,
+    #     M1=114.04,  # R1234ze
+    #     x1=1.0,
+    #     Tc2=382.75,
+    #     pc2=3.6349,
+    #     omega2=0.313,
+    #     M2=114.04,  # R1234ze
+    #     kij=0.0,
+    #     ps0=0.49314,
+    # )
+    # R1234ze.plot_pT("R1234ze")
+
     # 7-5
+
+    pass
