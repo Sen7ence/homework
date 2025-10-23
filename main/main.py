@@ -113,7 +113,7 @@ class PR:
     def Zg(self, T, p):
         C2, C1, C0 = self.C(T, p)
         # 牛顿法求解Z
-        Zg = 1.0  # 初始猜测值
+        Zg = 1.1  # 初始猜测值
         for _ in range(100):
             f = Zg**3 + C2 * Zg**2 + C1 * Zg + C0
             df = 3 * Zg**2 + 2 * C2 * Zg + C1
@@ -727,7 +727,7 @@ if __name__ == "__main__":
     #     kij=0.0,
     #     ps0=0.49314,
     # )
-    # R1234ze.plot_pT("R1234ze")
+    # R1234ze.plot_pT("R1234ze(E)")
 
     # 7-5
 

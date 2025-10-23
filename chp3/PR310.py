@@ -8,7 +8,7 @@ plt.rcParams["font.serif"] = ["Times New Roman"]
 plt.rcParams["mathtext.fontset"] = "stix"
 
 
-class PRFluid:
+class PR310:
     def __init__(self, Tc, Pc, omega, M):
         self.Tc = Tc  # 输入K
         self.Pc = Pc * 1e6  # 输入MPa
@@ -60,7 +60,7 @@ class PRFluid:
     def Zg(self, T, p):
         C2, C1, C0 = self.C(T, p)
         # 牛顿法求解Z
-        Zg = 1.0  # 初始猜测值
+        Zg = 1.1  # 初始猜测值
         for _ in range(100):
             f = Zg**3 + C2 * Zg**2 + C1 * Zg + C0
             df = 3 * Zg**2 + 2 * C2 * Zg + C1
@@ -133,7 +133,7 @@ class PRFluid:
         ax.set_xlabel(r"$v$ (m³/kg)")
         ax.set_ylabel(r"$T$ (K)")
         # 标题
-        ax.set_title(f"{fluid_name}  $v$–$T$ at $p$ = {p:.1f} MPa")
+        # ax.set_title(f"{fluid_name}  $v$–$T$ at $p$ = {p:.1f} MPa")
         ax.grid(True)
         ax.set_xscale("log")  # 使用对数刻度
         ax.legend(loc="upper left", frameon=True, fancybox=True, framealpha=0.9)
@@ -148,13 +148,13 @@ class PRFluid:
         savepath = os.path.join(fig_dir, filename)
 
         # 保存图像，固定参数
-        fig.savefig(savepath, dpi=300, bbox_inches="tight", transparent=False)
+        fig.savefig(savepath, dpi=600, bbox_inches="tight", transparent=False)
         plt.close(fig)
 
 
 # 实际计算
-R290 = PRFluid(369.89, 4.2512, 0.1521, 44.096)
+R290 = PR310(369.89, 4.2512, 0.1521, 44.096)
 R290.plot_Tv("R290", 1.4, 317.86, 200, 450)
 
-R600a = PRFluid(407.81, 3.629, 0.184, 58.122)
+R600a = PR310(407.81, 3.629, 0.184, 58.122)
 R600a.plot_Tv("R600a", 0.6, 314.12, 200, 450)

@@ -1,7 +1,7 @@
 import numpy as np
 
 
-class PRHS2:
+class PR415:
     def __init__(self, Tc1, pc1, omega1, M1, x1, Tc2, pc2, omega2, M2, kij, ps0):
         self.Tc1 = Tc1  # K
         self.pc1 = pc1 * 1e6  # Pa，输入MPa
@@ -104,7 +104,7 @@ class PRHS2:
     def Zg(self, T, p):
         C2, C1, C0 = self.C(T, p)
         # 牛顿法求解Z
-        Zg = 1.0  # 初始猜测值
+        Zg = 1.1  # 初始猜测值
         for _ in range(100):
             f = Zg**3 + C2 * Zg**2 + C1 * Zg + C0
             df = 3 * Zg**2 + 2 * C2 * Zg + C1
@@ -172,30 +172,30 @@ class PRHS2:
         return sr_g
 
     # 计算c_p积分
-    def cp(self, T, A, B, C, D):
+    def cp(self, T, A1, A2, B1, B2, C1, C2, D1, D2):
         cp = (
-            A * (T - 273.15)
-            + B / 2 * (T**2 - 273.15**2)
-            + C / 3 * (T**3 - 273.15**3)
-            + D / 4 * (T**4 - 273.15**4)
+            (A1 + A2) * 0.5 * (T - 273.15)
+            + (B1 + B2) * 0.5 / 2 * (T**2 - 273.15**2)
+            + (C1 + C2) * 0.5 / 3 * (T**3 - 273.15**3)
+            + (D1 + D2) * 0.5 / 4 * (T**4 - 273.15**4)
         )
         return cp
 
     # 计算c_p/T积分
-    def cpT(self, T, A, B, C, D):
+    def cpT(self, T, A1, A2, B1, B2, C1, C2, D1, D2):
         cp = (
-            A * np.log(T / 273.15)
-            + B * (T - 273.15)
-            + C / 2 * (T**2 - 273.15**2)
-            + D / 3 * (T**3 - 273.15**3)
+            (A1 + A2) * 0.5 * np.log(T / 273.15)
+            + (B1 + B2) * 0.5 * (T - 273.15)
+            + (C1 + C2) * 0.5 / 2 * (T**2 - 273.15**2)
+            + (D1 + D2) * 0.5 / 3 * (T**3 - 273.15**3)
         )
         return cp
 
     # 计算焓和熵
     # 液相
-    def h_l(self, T, A, B, C, D, p):
+    def h_l(self, T, A1, A2, B1, B2, C1, C2, D1, D2, p):
         h_r_ps_0 = self.h_res_l(273.15, self.ps0)
-        cp0 = self.cp(T, A, B, C, D)
+        cp0 = self.cp(T, A1, A2, B1, B2, C1, C2, D1, D2)
         h_res_l = self.h_res_l(T, p)
         hl = (
             200 * 1e3
@@ -204,9 +204,9 @@ class PRHS2:
         )  # J/kg
         return hl
 
-    def s_l(self, T, A, B, C, D, p):
+    def s_l(self, T, A1, A2, B1, B2, C1, C2, D1, D2, p):
         s_r_ps_0 = self.s_res_l(273.15, self.ps0)
-        cpT = self.cpT(T, A, B, C, D)
+        cpT = self.cpT(T, A1, A2, B1, B2, C1, C2, D1, D2)
         sr_l = self.s_res_l(T, p)
         sl = (
             1e3
@@ -217,9 +217,9 @@ class PRHS2:
         return sl
 
     # 气相
-    def h_g(self, T, A, B, C, D, p):
+    def h_g(self, T, A1, A2, B1, B2, C1, C2, D1, D2, p):
         h_r_ps_0 = self.h_res_l(273.15, self.ps0)  # 使用液相作为基准
-        cp0 = self.cp(T, A, B, C, D)
+        cp0 = self.cp(T, A1, A2, B1, B2, C1, C2, D1, D2)
         h_res_g = self.h_res_g(T, p)
         hg = (
             200 * 1e3
@@ -228,9 +228,9 @@ class PRHS2:
         )  # J/kg
         return hg
 
-    def s_g(self, T, A, B, C, D, p):
+    def s_g(self, T, A1, A2, B1, B2, C1, C2, D1, D2, p):
         s_r_ps_0 = self.s_res_l(273.15, self.ps0)  # 使用液相作为基准
-        cpT = self.cpT(T, A, B, C, D)
+        cpT = self.cpT(T, A1, A2, B1, B2, C1, C2, D1, D2)
         sr_g = self.s_res_g(T, p)
         sg = (
             1e3
@@ -241,7 +241,7 @@ class PRHS2:
         return sg
 
 
-R290R600a = PRHS2(
+R290R600a = PR415(
     Tc1=369.89,
     pc1=4.2512,
     omega1=0.1521,
@@ -255,4 +255,32 @@ R290R600a = PRHS2(
     ps0=0.32979,
 )
 
-print(R290R600a.s_g(300, -95.80, 6.945, -3.597 * 1e-3, 7.290 * 1e-7, 1.4))
+# 300K下计算比焓和比熵
+print(
+    R290R600a.h_l(
+        300,
+        -95.80,
+        -23.91,
+        6.945,
+        6.605,
+        -3.597 * 1e-3,
+        -3.176 * 1e-3,
+        7.290 * 1e-7,
+        4.981 * 1e-7,
+        1.0,
+    )
+)
+print(
+    R290R600a.s_l(
+        300,
+        -95.80,
+        -23.91,
+        6.945,
+        6.605,
+        -3.597 * 1e-3,
+        -3.176 * 1e-3,
+        7.290 * 1e-7,
+        4.981 * 1e-7,
+        1.0,
+    )
+)
