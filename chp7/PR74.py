@@ -138,8 +138,8 @@ class PR74:
         ax.set_ylim(bottom=0)
         ax.yaxis.set_major_locator(MultipleLocator(0.2))
         ax.yaxis.set_minor_locator(MultipleLocator(0.1))
-        ax.set_xlabel("T (K)")
-        ax.set_ylabel("p (MPa)")
+        ax.set_xlabel(r"$T$ (K)")
+        ax.set_ylabel(r"$p$(MPa)")
         ax.grid(True)
 
         base_dir = os.path.dirname(os.path.abspath(__file__))

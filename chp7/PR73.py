@@ -39,8 +39,8 @@ class PR73:
         ax = fig.add_subplot(1, 1, 1)
         ax.plot(T_grid, psat_grid, "b-", linewidth=2)
         ax.set_ylim(bottom=0)
-        ax.set_xlabel("T (K)", fontsize=14)
-        ax.set_ylabel(r"$P_\mathrm{sat}$(MPa)", fontsize=14)
+        ax.set_xlabel(r"$T$(K)", fontsize=14)
+        ax.set_ylabel(r"$p_\mathrm{sat}$(MPa)", fontsize=14)
         ax.grid(True)
 
         # 保存图像
